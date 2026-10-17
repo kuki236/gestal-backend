@@ -50,8 +50,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").hasRole("ESTUDIANTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/solicitudes/*").hasAnyRole("ESTUDIANTE", "SUPERVISOR", "ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes/*/estado").hasAnyRole("TECNICO", "SUPERVISOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes/*/responsable").hasRole("SUPERVISOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/solicitudes/*").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

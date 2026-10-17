@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS solicitud (
   motivo_rechazo VARCHAR(500) NULL,
   fecha_creacion DATETIME NOT NULL,
   fecha_actualizacion DATETIME NULL,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (id),
   UNIQUE KEY uk_solicitud_codigo (codigo),
   KEY fk_solicitud_solicitante (solicitante_id),
@@ -86,6 +87,6 @@ INSERT IGNORE INTO usuario (id, nombre, correo, password_hash, rol_id, activo, a
 
 -- Solicitud de ejemplo (coincide con el prototipo)
 INSERT IGNORE INTO solicitud
-  (id, codigo, solicitante_id, categoria_id, descripcion, ubicacion, prioridad, estado, responsable_id, motivo_rechazo, fecha_creacion, fecha_actualizacion)
+  (id, codigo, solicitante_id, categoria_id, descripcion, ubicacion, prioridad, estado, responsable_id, motivo_rechazo, fecha_creacion, fecha_actualizacion, activo)
 VALUES
-  (1, 'GEST-2026-001', 1, 1, 'El proyector del laboratorio no enciende', 'Laboratorio 204 · Pabellón nuevo', 'MEDIA', 'NUEVO', NULL, NULL, '2026-10-16 09:00:00', '2026-10-16 09:00:00');
+  (1, 'GEST-2026-001', 1, 1, 'El proyector del laboratorio no enciende', 'Laboratorio 204 · Pabellón nuevo', 'MEDIA', 'NUEVO', NULL, NULL, '2026-10-16 09:00:00', '2026-10-16 09:00:00', TRUE);

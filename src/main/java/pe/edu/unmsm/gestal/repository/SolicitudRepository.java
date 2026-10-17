@@ -8,13 +8,11 @@ import pe.edu.unmsm.gestal.entity.Solicitud;
 
 public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
 
-    List<Solicitud> findBySolicitante_IdOrderByFechaCreacionDesc(Long solicitanteId);
+    List<Solicitud> findBySolicitante_IdAndActivoTrueOrderByFechaCreacionDesc(Long solicitanteId);
 
-    List<Solicitud> findByResponsable_IdOrderByFechaCreacionDesc(Long responsableId);
+    List<Solicitud> findByResponsable_IdAndActivoTrueOrderByFechaCreacionDesc(Long responsableId);
 
-    List<Solicitud> findByCategoria_AreaResponsableOrderByFechaCreacionDesc(String areaResponsable);
+    List<Solicitud> findByCategoria_AreaResponsableAndActivoTrueOrderByFechaCreacionDesc(String areaResponsable);
 
-    List<Solicitud> findAllByOrderByFechaCreacionDesc();
-
-    long countByFechaCreacionBetween(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+    List<Solicitud> findAllByActivoTrueOrderByFechaCreacionDesc();
 }

@@ -64,12 +64,12 @@ public class SolicitudService {
     @Transactional(readOnly = true)
     public List<SolicitudResponse> listar(Usuario usuario) {
         List<Solicitud> resultado = switch (usuario.getRol().getNombre()) {
-            case ESTUDIANTE -> solicitudes.findBySolicitante_IdOrderByFechaCreacionDesc(usuario.getId());
-            case TECNICO -> solicitudes.findByResponsable_IdOrderByFechaCreacionDesc(usuario.getId());
+            case ESTUDIANTE -> solicitudes.findBySolicitante_IdAndActivoTrueOrderByFechaCreacionDesc(usuario.getId());
+            case TECNICO -> solicitudes.findByResponsable_IdAndActivoTrueOrderByFechaCreacionDesc(usuario.getId());
             case SUPERVISOR -> usuario.getArea() != null
-                    ? solicitudes.findByCategoria_AreaResponsableOrderByFechaCreacionDesc(usuario.getArea())
-                    : solicitudes.findAllByOrderByFechaCreacionDesc();
-            case ADMINISTRADOR -> solicitudes.findAllByOrderByFechaCreacionDesc();
+                    ? solicitudes.findByCategoria_AreaResponsableAndActivoTrueOrderByFechaCreacionDesc(usuario.getArea())
+                    : solicitudes.findAllByActivoTrueOrderByFechaCreacionDesc();
+            case ADMINISTRADOR -> solicitudes.findAllByActivoTrueOrderByFechaCreacionDesc();
         };
         return resultado.stream().map(this::toResponse).toList();
     }
@@ -130,6 +130,46 @@ public class SolicitudService {
         return toResponse(solicitudes.save(solicitud));
     }
 
+    @Transactional
+    public void eliminar(Long id, Usuario usuario) {
+        if (usuario.getRol().getNombre() != NombreRol.ADMINISTRADOR) {
+            throw new BusinessException("Solo el administrador puede eliminar solicitudes");
+        }
+        Solicitud solicitud = buscar(id);
+        solicitud.setActivo(false);
+        solicitud.setFechaActualizacion(LocalDateTime.now());
+        solicitudes.save(solicitud);
+    }
+
+    @Transactional
+    public SolicitudResponse actualizar(Long id, SolicitudRequest request, Usuario usuario) {
+        Solicitud solicitud = buscar(id);
+        NombreRol rol = usuario.getRol().getNombre();
+        if (solicitud.getEstado() == EstadoSolicitud.CERRADO || solicitud.getEstado() == EstadoSolicitud.RECHAZADO) {
+            throw new BusinessException("Una solicitud cerrada o rechazada no se puede editar");
+        }
+        switch (rol) {
+            case ESTUDIANTE -> {
+                if (!solicitud.getSolicitante().getId().equals(usuario.getId())) {
+                    throw new AccessDeniedException("No puede editar una solicitud que no es suya");
+                }
+                if (solicitud.getEstado() != EstadoSolicitud.NUEVO) {
+                    throw new BusinessException("Solo puede editar una solicitud en estado NUEVO");
+                }
+            }
+            case SUPERVISOR, ADMINISTRADOR -> {
+            }
+            default -> throw new BusinessException("Rol no autorizado para editar solicitudes");
+        }
+        Categoria categoria = categoriaService.porId(request.categoriaId());
+        solicitud.setCategoria(categoria);
+        solicitud.setDescripcion(request.descripcion());
+        solicitud.setUbicacion(request.ubicacion());
+        solicitud.setPrioridad(categoria.getPrioridadInicial());
+        solicitud.setFechaActualizacion(LocalDateTime.now());
+        return toResponse(solicitudes.save(solicitud));
+    }
+
     private void validarTransicion(Solicitud solicitud, EstadoSolicitud nuevo, NombreRol rol, String motivo) {
         Set<EstadoSolicitud> permitidas = TRANSICIONES.getOrDefault(solicitud.getEstado(), Set.of());
         if (!permitidas.contains(nuevo)) {
@@ -155,6 +195,7 @@ public class SolicitudService {
 
     private Solicitud buscar(Long id) {
         return solicitudes.findById(id)
+                .filter(Solicitud::isActivo)
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + id));
     }
 

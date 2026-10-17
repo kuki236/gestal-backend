@@ -60,6 +60,9 @@ public class Solicitud {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    @Column(nullable = false)
+    private boolean activo = true;
+
     public Long getId() {
         return id;
     }
@@ -154,5 +157,13 @@ public class Solicitud {
 
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 }

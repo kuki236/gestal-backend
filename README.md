@@ -92,8 +92,10 @@ Base: `http://localhost:8080`
 | GET | `/api/solicitudes` | Autenticado | Listar según rol |
 | GET | `/api/solicitudes/{id}` | Autenticado | Ver detalle con control de acceso |
 | POST | `/api/solicitudes` | Estudiante | Registrar solicitud (`categoriaId`, `descripcion`, `ubicacion`) |
+| PUT | `/api/solicitudes/{id}` | Estudiante/Supervisor/Admin | Actualizar solicitud (`categoriaId`, `descripcion`, `ubicacion`) |
 | PATCH | `/api/solicitudes/{id}/estado` | Técnico/Supervisor | Cambiar estado (`estado`, `motivo` opcional para rechazo) |
 | PATCH | `/api/solicitudes/{id}/responsable` | Supervisor | Asignar responsable (`responsableId`, `prioridad` opcional); pasa a ASIGNADO |
+| DELETE | `/api/solicitudes/{id}` | Administrador | Eliminación lógica de la solicitud |
 
 Autenticación: `Authorization: Bearer <token>`.
 
@@ -118,6 +120,8 @@ curl -X POST http://localhost:8080/api/solicitudes \
   -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"categoriaId":1,"descripcion":"El proyector no enciende","ubicacion":"Laboratorio 204"}'
 ```
+
+También hay una colección Postman lista para importar en `api/gestal.postman_collection.json` (guarda el token del login automáticamente).
 
 ## Estructura
 
