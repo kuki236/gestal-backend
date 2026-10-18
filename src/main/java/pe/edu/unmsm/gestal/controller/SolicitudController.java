@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import pe.edu.unmsm.gestal.dto.AsignarResponsableRequest;
 import pe.edu.unmsm.gestal.dto.CambioEstadoRequest;
+import pe.edu.unmsm.gestal.dto.ComentarioRequest;
+import pe.edu.unmsm.gestal.dto.ComentarioResponse;
+import pe.edu.unmsm.gestal.dto.SolicitudDetalleResponse;
 import pe.edu.unmsm.gestal.dto.SolicitudRequest;
 import pe.edu.unmsm.gestal.dto.SolicitudResponse;
 import pe.edu.unmsm.gestal.entity.Usuario;
@@ -42,8 +45,16 @@ public class SolicitudController {
     }
 
     @GetMapping("/{id}")
-    public SolicitudResponse obtener(@PathVariable Long id, Authentication authentication) {
+    public SolicitudDetalleResponse obtener(@PathVariable Long id, Authentication authentication) {
         return solicitudService.obtener(id, usuarioActual(authentication));
+    }
+
+    @PostMapping("/{id}/comentarios")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ComentarioResponse comentar(@PathVariable Long id,
+            @Valid @RequestBody ComentarioRequest request,
+            Authentication authentication) {
+        return solicitudService.comentar(id, request, usuarioActual(authentication));
     }
 
     @PostMapping

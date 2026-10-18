@@ -87,11 +87,13 @@ Base: `http://localhost:8080`
 | Método | Ruta | Rol | Uso |
 | --- | --- | --- | --- |
 | POST | `/api/auth/login` | Público | Iniciar sesión; devuelve `token`, `rol` y `area` |
+| GET | `/api/usuarios?rol=TECNICO` | Supervisor/Admin | Listar usuarios por rol (usado por el frontend para asignar responsables) |
 | GET | `/api/categorias` | Autenticado | Listar categorías (id, nombre, área y prioridad inicial) |
 | GET | `/api/prioridades` | Autenticado | Listar los valores de prioridad |
 | GET | `/api/solicitudes` | Autenticado | Listar según rol |
-| GET | `/api/solicitudes/{id}` | Autenticado | Ver detalle con control de acceso |
+| GET | `/api/solicitudes/{id}` | Autenticado | Ver detalle con control de acceso, historial de estados y comentarios |
 | POST | `/api/solicitudes` | Estudiante | Registrar solicitud (`categoriaId`, `descripcion`, `ubicacion`) |
+| POST | `/api/solicitudes/{id}/comentarios` | Autenticado (según rol) | Añadir comentario (`texto`); no permitido en estados finales |
 | PUT | `/api/solicitudes/{id}` | Estudiante/Supervisor/Admin | Actualizar solicitud (`categoriaId`, `descripcion`, `ubicacion`) |
 | PATCH | `/api/solicitudes/{id}/estado` | Técnico/Supervisor | Cambiar estado (`estado`, `motivo` opcional para rechazo) |
 | PATCH | `/api/solicitudes/{id}/responsable` | Supervisor | Asignar responsable (`responsableId`, `prioridad` opcional); pasa a ASIGNADO |
@@ -106,6 +108,8 @@ Autenticación: `Authorization: Bearer <token>`.
 - Transiciones válidas: `NUEVO → ASIGNADO → EN_PROCESO → RESUELTO → CERRADO`; `RECHAZADO` como salida. `CERRADO` y `RECHAZADO` son finales.
 - El técnico solo mueve `ASIGNADO → EN_PROCESO → RESUELTO`; el cierre, el rechazo y la asignación son del supervisor.
 - El estudiante solo ve sus propias solicitudes.
+- El historial de estados se registra en cada creación, transición y asignación (`GET /solicitudes/{id}` lo devuelve).
+- Comentarios: puede comentar el solicitante dueño, el técnico responsable, el supervisor y el administrador; no se permiten en estados finales.
 
 ### Ejemplo rápido
 
@@ -139,10 +143,10 @@ src/main/java/pe/edu/unmsm/gestal/
 
 ## Estado
 
-Fase II — primera versión funcional (MVP): login, registro, consulta y cambio de estado con MySQL.
+Fase II — primera versión funcional (MVP): login, registro, consulta, cambio de estado, historial y comentarios con MySQL.
 
 ## Pendientes (fuera del MVP)
 
-- Historial de estados persistido y comentarios.
-- Dashboard de indicadores, SLA y auditoría.
+- Paginación de listados (RNF-10).
+- Dashboard de indicadores, SLA, auditoría y adjuntos.
 - Docker, CI/CD, pruebas automatizadas y observabilidad.

@@ -12,15 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pe.edu.unmsm.gestal.dto.AsignarResponsableRequest;
 import pe.edu.unmsm.gestal.dto.CambioEstadoRequest;
+import pe.edu.unmsm.gestal.dto.ComentarioRequest;
+import pe.edu.unmsm.gestal.dto.ComentarioResponse;
+import pe.edu.unmsm.gestal.dto.HistorialEstadoResponse;
+import pe.edu.unmsm.gestal.dto.SolicitudDetalleResponse;
 import pe.edu.unmsm.gestal.dto.SolicitudRequest;
 import pe.edu.unmsm.gestal.dto.SolicitudResponse;
 import pe.edu.unmsm.gestal.entity.Categoria;
+import pe.edu.unmsm.gestal.entity.Comentario;
 import pe.edu.unmsm.gestal.entity.EstadoSolicitud;
+import pe.edu.unmsm.gestal.entity.HistorialEstado;
 import pe.edu.unmsm.gestal.entity.NombreRol;
 import pe.edu.unmsm.gestal.entity.Solicitud;
 import pe.edu.unmsm.gestal.entity.Usuario;
 import pe.edu.unmsm.gestal.exception.BusinessException;
 import pe.edu.unmsm.gestal.exception.ResourceNotFoundException;
+import pe.edu.unmsm.gestal.repository.ComentarioRepository;
+import pe.edu.unmsm.gestal.repository.HistorialEstadoRepository;
 import pe.edu.unmsm.gestal.repository.SolicitudRepository;
 
 @Service
@@ -35,12 +43,17 @@ public class SolicitudService {
     private final SolicitudRepository solicitudes;
     private final CategoriaService categoriaService;
     private final UsuarioService usuarioService;
+    private final HistorialEstadoRepository historialEstados;
+    private final ComentarioRepository comentarios;
 
     public SolicitudService(SolicitudRepository solicitudes, CategoriaService categoriaService,
-            UsuarioService usuarioService) {
+            UsuarioService usuarioService, HistorialEstadoRepository historialEstados,
+            ComentarioRepository comentarios) {
         this.solicitudes = solicitudes;
         this.categoriaService = categoriaService;
         this.usuarioService = usuarioService;
+        this.historialEstados = historialEstados;
+        this.comentarios = comentarios;
     }
 
     @Transactional
@@ -58,7 +71,9 @@ public class SolicitudService {
         solicitud.setEstado(EstadoSolicitud.NUEVO);
         solicitud.setFechaCreacion(LocalDateTime.now());
         solicitud.setFechaActualizacion(LocalDateTime.now());
-        return toResponse(solicitudes.save(solicitud));
+        Solicitud guardada = solicitudes.save(solicitud);
+        registrarHistorial(guardada, EstadoSolicitud.NUEVO, "Solicitud registrada", null, solicitante);
+        return toResponse(guardada);
     }
 
     @Transactional(readOnly = true)
@@ -75,13 +90,21 @@ public class SolicitudService {
     }
 
     @Transactional(readOnly = true)
-    public SolicitudResponse obtener(Long id, Usuario usuario) {
+    public SolicitudDetalleResponse obtener(Long id, Usuario usuario) {
         Solicitud solicitud = buscar(id);
         if (usuario.getRol().getNombre() == NombreRol.ESTUDIANTE
                 && !solicitud.getSolicitante().getId().equals(usuario.getId())) {
             throw new AccessDeniedException("No puede ver una solicitud que no es suya");
         }
-        return toResponse(solicitud);
+        List<HistorialEstadoResponse> historial = historialEstados
+                .findBySolicitud_IdOrderByFechaAscIdAsc(id).stream()
+                .map(this::toHistorial)
+                .toList();
+        List<ComentarioResponse> listaComentarios = comentarios
+                .findBySolicitud_IdOrderByFechaAscIdAsc(id).stream()
+                .map(this::toComentario)
+                .toList();
+        return new SolicitudDetalleResponse(toResponse(solicitud), historial, listaComentarios);
     }
 
     @Transactional
@@ -102,7 +125,11 @@ public class SolicitudService {
             solicitud.setMotivoRechazo(request.motivo());
         }
         solicitud.setFechaActualizacion(LocalDateTime.now());
-        return toResponse(solicitudes.save(solicitud));
+        Solicitud guardada = solicitudes.save(solicitud);
+        boolean rechazo = request.estado() == EstadoSolicitud.RECHAZADO;
+        registrarHistorial(guardada, request.estado(), rechazo ? "Rechazo" : "Cambio de estado",
+                rechazo ? request.motivo() : null, usuario);
+        return toResponse(guardada);
     }
 
     @Transactional
@@ -123,11 +150,46 @@ public class SolicitudService {
         if (request.prioridad() != null) {
             solicitud.setPrioridad(request.prioridad());
         }
-        if (solicitud.getEstado() == EstadoSolicitud.NUEVO) {
+        boolean pasoAAsignado = solicitud.getEstado() == EstadoSolicitud.NUEVO;
+        if (pasoAAsignado) {
             solicitud.setEstado(EstadoSolicitud.ASIGNADO);
         }
         solicitud.setFechaActualizacion(LocalDateTime.now());
-        return toResponse(solicitudes.save(solicitud));
+        Solicitud guardada = solicitudes.save(solicitud);
+        if (pasoAAsignado) {
+            registrarHistorial(guardada, EstadoSolicitud.ASIGNADO, "Cambio de estado", null, usuario);
+        }
+        return toResponse(guardada);
+    }
+
+    @Transactional
+    public ComentarioResponse comentar(Long id, ComentarioRequest request, Usuario usuario) {
+        Solicitud solicitud = buscar(id);
+        if (solicitud.getEstado() == EstadoSolicitud.CERRADO || solicitud.getEstado() == EstadoSolicitud.RECHAZADO) {
+            throw new BusinessException("No se pueden agregar comentarios a una solicitud finalizada");
+        }
+        NombreRol rol = usuario.getRol().getNombre();
+        switch (rol) {
+            case ESTUDIANTE -> {
+                if (!solicitud.getSolicitante().getId().equals(usuario.getId())) {
+                    throw new AccessDeniedException("No puede comentar una solicitud que no es suya");
+                }
+            }
+            case TECNICO -> {
+                if (solicitud.getResponsable() == null
+                        || !solicitud.getResponsable().getId().equals(usuario.getId())) {
+                    throw new AccessDeniedException("Solo el técnico responsable puede comentar esta solicitud");
+                }
+            }
+            default -> {
+            }
+        }
+        Comentario comentario = new Comentario();
+        comentario.setSolicitud(solicitud);
+        comentario.setAutor(usuario);
+        comentario.setTexto(request.texto().trim());
+        comentario.setFecha(LocalDateTime.now());
+        return toComentario(comentarios.save(comentario));
     }
 
     @Transactional
@@ -203,6 +265,36 @@ public class SolicitudService {
         int anio = LocalDateTime.now().getYear();
         long correlativo = solicitudes.count() + 1;
         return String.format("GEST-%d-%03d", anio, correlativo);
+    }
+
+    private void registrarHistorial(Solicitud solicitud, EstadoSolicitud estado, String titulo, String detalle,
+            Usuario autor) {
+        HistorialEstado entrada = new HistorialEstado();
+        entrada.setSolicitud(solicitud);
+        entrada.setEstado(estado);
+        entrada.setTitulo(titulo);
+        entrada.setDetalle(detalle);
+        entrada.setFecha(LocalDateTime.now());
+        entrada.setAutor(autor);
+        historialEstados.save(entrada);
+    }
+
+    private HistorialEstadoResponse toHistorial(HistorialEstado entrada) {
+        return new HistorialEstadoResponse(
+                entrada.getEstado(),
+                entrada.getTitulo(),
+                entrada.getDetalle(),
+                entrada.getFecha(),
+                entrada.getAutor() != null ? entrada.getAutor().getNombre() : "Sistema");
+    }
+
+    private ComentarioResponse toComentario(Comentario comentario) {
+        return new ComentarioResponse(
+                comentario.getId(),
+                comentario.getAutor().getNombre(),
+                comentario.getAutor().getRol().getNombre().name(),
+                comentario.getFecha(),
+                comentario.getTexto());
     }
 
     private SolicitudResponse toResponse(Solicitud s) {
