@@ -83,10 +83,11 @@ INSERT IGNORE INTO usuario (id, nombre, correo, password_hash, rol_id, activo, a
   (1, 'Ana Torres', 'ana.torres@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 1, TRUE, NULL),
   (2, 'Luis Rojas', 'luis.rojas@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 2, TRUE, 'Soporte informático'),
   (3, 'María Vega', 'maria.vega@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 3, TRUE, 'Soporte informático'),
-  (4, 'Administrador', 'admin@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 4, TRUE, NULL);
+  (4, 'Administrador', 'admin@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 4, TRUE, NULL),
+  (5, 'Carla Ramos', 'carla.ramos@example.edu', '$2a$10$nkxXcMOhL7HzS6rsXeD4beBBInoP21ZJKWjXjF4t4D6filPDXJd7y', 2, TRUE, 'Soporte informático');
 
--- Solicitud de ejemplo (coincide con el prototipo)
+-- Solicitud de ejemplo (coincide con el prototipo Figma)
 INSERT IGNORE INTO solicitud
   (id, codigo, solicitante_id, categoria_id, descripcion, ubicacion, prioridad, estado, responsable_id, motivo_rechazo, fecha_creacion, fecha_actualizacion, activo)
 VALUES
-  (1, 'GEST-2026-001', 1, 1, 'El proyector del laboratorio no enciende', 'Laboratorio 204 · Pabellón nuevo', 'MEDIA', 'NUEVO', NULL, NULL, '2026-10-16 09:00:00', '2026-10-16 09:00:00', TRUE);
+  (1, 'GEST-2026-001', 1, 1, 'El proyector del laboratorio no enciende.', 'Laboratorio 204 · Pabellón nuevo', 'MEDIA', 'NUEVO', NULL, NULL, '2026-10-16 09:00:00', '2026-10-16 09:00:00', TRUE);
